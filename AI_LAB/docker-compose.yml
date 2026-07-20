@@ -1,0 +1,9 @@
+services:
+  ubuntu-learning-lab:
+    image: ubuntu:24.04
+    container_name: basic-ubuntu-lab
+    command: sleep infinity
+    volumes:
+      - ./workspace:/workspace
+    ports:
+      - "8080:80"
