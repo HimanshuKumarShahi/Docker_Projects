@@ -33,7 +33,7 @@ volumes: Creates a portal between Windows and Linux. Any file I put in the works
 
 ports: Routes web traffic from my Windows machine (Port 8080) directly into the Ubuntu container's web server (Port 80).
 
-```
+```base
 1.  docker compose up -d
 
 2.  docker exec -it basic-ubuntu-lab bash
