@@ -1,10 +1,11 @@
 services:
   ubuntu-learning-lab:
-    image: ubuntu:24.04
+    build: .
     container_name: basic-ubuntu-lab
-    command: sleep infinity
+    environment:
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
     volumes:
       - ./workspace:/workspace
     ports:
-      - "8080:80"
       - "3000:3000"
