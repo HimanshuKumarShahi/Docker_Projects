@@ -7,11 +7,11 @@
 **Primary Purpose:** A 100% free, private Platform-as-a-Service (PaaS) allowing developers, friends, and family to deploy, host, and manage web applications and services without relying on paid cloud providers.
 
 ### **Functional Requirements:**
-- **User & Auth Management:** Multi-user support with role-based access (Admin, Developer/Friend).
+- **User & Auth Management:** Multi-user support with role-based access control (Admin vs Friend roles).
 - **Git Integration:** Auto-clone and auto-build from public or private GitHub/GitLab repositories.
 - **Container Lifecycle Management:** Trigger `build`, `start`, `stop`, `restart`, and `delete` operations on deployed app containers via Docker API.
 - **Dynamic Subdomain Routing:** Automatic proxying of incoming requests to target container ports based on subdomain headers.
-- **Log Streaming:** Real-time stdout/stderr build and execution log streaming to UI.
+- **Log Streaming:** Real-time stdout/stderr build and execution log streaming to UI via WebSockets.
 - **Public Tunneling:** One-click integration with Cloudflare Tunnels for zero-trust public HTTPS deployment.
 
 ---
@@ -32,7 +32,7 @@ erDiagram
         string id PK
         string username
         string email
-        string password_hash
+        string password_hash "Bcrypt Salted Hash"
         string role "Admin | Friend"
         datetime created_at
     }
@@ -53,7 +53,7 @@ erDiagram
         string id PK
         string project_id FK
         string key
-        string value_encrypted
+        string value_encrypted "AES-256-GCM Encrypted"
         boolean is_secret
     }
 
@@ -77,7 +77,7 @@ erDiagram
     BUILD_LOGS {
         string id PK
         string deployment_id FK
-        string log_line
+        string log_line "Sanitized (No Secrets)"
         string log_level "INFO | ERROR | WARN"
         datetime timestamp
     }
@@ -98,12 +98,12 @@ flowchart TD
         CF[Cloudflare Tunnel - Zero Trust]
     end
 
-    subgraph Home Host Machine / Docker Container
-        subgraph Edge Proxy
+    subgraph Host Server / Docker Container Environment
+        subgraph Edge Proxy Layer
             TR[Traefik / Dynamic Nginx Proxy - Port 8080]
         end
 
-        subgraph CloudPulse Core
+        subgraph CloudPulse Core Plane
             UI[CloudPulse Web UI - Port 3000]
             API[Control API Engine - Port 4000]
             DB[(SQLite / Postgres DB)]
@@ -112,10 +112,10 @@ flowchart TD
         subgraph Docker Engine Engine
             DE[Docker Daemon Socket /var/run/docker.sock]
             
-            subgraph Spawned Friend Containers
+            subgraph Sandboxed App Containers
                 C1[Friend App 1: Next.js - Port 3001]
                 C2[Friend App 2: Python API - Port 3002]
-                C3[Family Photo App: React - Port 3003]
+                C3[Family App: React - Port 3003]
             end
         end
     end
@@ -137,44 +137,54 @@ flowchart TD
 
 ---
 
-## 🔄 4. Data Flow & Deployment Sequence Diagram
+## 🔄 4. Data Flow & End-to-End Sequence Diagram
 
-This sequence illustrates what happens when a friend deploys a new project from a Git repository URL:
+This sequence details the step-by-step lifecycle from authentication to dynamic deployment:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Friend as Friend / Developer
+    actor Friend as User / Friend
     participant UI as CloudPulse UI
     participant API as Control API Backend
+    participant DB as Encrypted Database
     participant Git as GitHub Repository
-    participant Docker as Docker Daemon API
+    participant Docker as Docker Engine API
     participant Proxy as Traefik Gateway
 
-    Friend->>UI: Input Git URL (https://github.com/friend/app) & Env Vars
-    UI->>API: POST /api/projects/deploy { gitUrl, envVars }
-    API->>Git: Clone repository into /tmp/builds/<project-id>
-    Git-->>API: Code downloaded successfully
-    API->>API: Detect build type (Dockerfile / package.json / requirements.txt)
+    Friend->>UI: 1. Login (Email + Password)
+    UI->>API: POST /api/auth/login
+    API->>DB: Verify Bcrypt Hash
+    DB-->>API: Valid Credential
+    API-->>UI: Issue HttpOnly JWT Token
+
+    Friend->>UI: 2. Input Git URL & Secrets (.env)
+    UI->>API: POST /api/projects/deploy { gitUrl, envSecrets }
+    API->>DB: Store encrypted secrets (AES-256-GCM)
+    API->>Git: Clone repo into /var/tmp/cloudpulse/builds/<project-id>
+    Git-->>API: Code downloaded safely
+
     API->>Docker: Execute docker build -t project-id:latest .
-    Docker-->>API: Stream build logs (sent to UI via WebSockets)
-    API->>Docker: Execute docker run -d --name project-id -p <dynamic_port>:3000
+    Docker-->>API: Stream build logs (Sanitized secret masking)
+    API->>Docker: Execute docker run -d --memory=512m --cpus=1.0 -p <dynamic_port>:3000
     Docker-->>API: Container ID returned (Status: Running)
-    API->>Proxy: Register new dynamic rule (subdomain -> dynamic_port)
-    Proxy-->>API: Rule active
-    API-->>UI: Deployment Complete! Return URL: http://app.cloudpulse.local
-    UI-->>Friend: Display live project URL & status dashboard
+
+    API->>Proxy: Register dynamic routing rule (app-name.local -> dynamic_port)
+    Proxy-->>API: Rule confirmed active
+    API-->>UI: Deployment Complete! URL: http://app-name.cloudpulse.local
+    UI-->>Friend: Display live project status & log terminal
 ```
 
 ---
 
-## 🛡️ 5. Security & Resource Isolation Blueprint
+## 🛡️ 5. Data Safety & Security Matrix
 
-1. **Docker Container Isolation:**
-   - Every deployed project runs in its own non-privileged container bridge network.
-   - Deployed containers cannot access host files or other containers unless explicitly linked.
-2. **Resource Limits per Project:**
-   - **RAM Limit:** Default `512MB` max per container (prevents one memory-heavy app from freezing your server).
-   - **CPU Limit:** Default `1.0 CPU Core` ceiling.
-3. **Secret Encryption:**
-   - All environment variables (`.env`) stored in the database are encrypted at rest using AES-256 GCM encryption.
+| Layer | Security Threat | Mitigation Mechanism | Implementation Details |
+| :--- | :--- | :--- | :--- |
+| **Authentication** | Brute force / Credential theft | Bcrypt + JWT Cookies | 12 Salt Rounds, HttpOnly, SameSite=Strict cookies |
+| **Database Secrets** | Plaintext leaks / DB dumping | AES-256-GCM Encryption | Secrets encrypted at rest; decrypted in-memory only at container startup |
+| **Git Ingestion** | Remote Code / Shell Injection | Strict Input Sanitization | Validates HTTPS git URLs, rejects arbitrary shell tokens |
+| **Container Engine** | Host takeover / Resource exhaustion | Unprivileged Cgroups | CPU ceiling (`1.0`), RAM max (`512MB`), isolated network bridges |
+| **Log Terminal** | Accidental API Key disclosure | Regex Secret Masking | Automatically redacts matching `.env` secret values before outputting logs |
+| **Public Gateway** | Port scanning / DDoS | Cloudflare Tunnels | Outbound-only TLS connection; no open inbound router ports required |
+
