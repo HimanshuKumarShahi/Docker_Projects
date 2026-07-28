@@ -45,6 +45,31 @@ export default function Home() {
           </a>
         </div>
       </main>
+
+       <section id="features" className="max-w-5xl mx-auto px-6 py-16 border-t border-slate-200">
+        <h2 className="text-3xl font-bold text-center text-slate-900 mb-12">Built-in Superpowers</h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Card 1 */}
+          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+            <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 font-bold mb-4">⚡</div>
+            <h3 className="text-xl font-semibold mb-2">App Router</h3>
+            <p className="text-slate-600 text-sm leading-relaxed">Leverage React Server Components out of the box for faster page loads.</p>
+          </div>
+          {/* Card 2 */}
+          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+            <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 font-bold mb-4">🎨</div>
+            <h3 className="text-xl font-semibold mb-2">Tailwind Styled</h3>
+            <p className="text-slate-600 text-sm leading-relaxed">Utility-first CSS classes make layout changes quick and easily maintainable.</p>
+          </div>
+          {/* Card 3 */}
+          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+            <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 font-bold mb-4">🚀</div>
+            <h3 className="text-xl font-semibold mb-2">Optimised Production</h3>
+            <p className="text-slate-600 text-sm leading-relaxed">Automatic code-splitting, image optimization, and static generation pre-built.</p>
+          </div>
+        </div>
+      </section>
+      
       {/* Basic Footer */}
       <footer className="text-center py-8 text-sm text-slate-400 border-t border-slate-100 bg-white mt-12">
         <p>© {new Date().getFullYear()} MyNextApp. Built with Next.js & Tailwind CSS.</p>
