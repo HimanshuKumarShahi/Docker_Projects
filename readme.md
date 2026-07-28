@@ -18,3 +18,21 @@ CMD ["sleep", "infinity"]
 ```
 paste in docker filr in root folder.
 
+
+## in Docker compose.yml 
+
+```bash
+services:
+  ubuntu-learning-lab:
+    build: .
+    container_name: basic-ubuntu-lab
+    environment:
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./workspace:/workspace
+    ports:
+      - "3000:3000"
+```
+
+then your basic ubuntu is ready for use.
