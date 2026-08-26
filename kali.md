@@ -1,5 +1,4 @@
-# 🛡️ Ethical Hacking Project: Brute-Force Password Cracker
-**Environment:** Kali Linux CLI (via Docker)
+# Kali Linux CLI (via Docker)
 **Tools:** Python, Flask, Requests
 
 ---
@@ -9,12 +8,14 @@
 Sabse pehle VS Code ke PowerShell terminal me Kali Linux ka container banayein aur start karein:
 
 ```bash
-# Naya Kali container download aur run karne ke liye (Sirf pehli baar)
+# Naya Kali container download aur run karne ke liye
+
 docker run -it --name my_kali kalilinux/kali-rolling /bin/bash
 
-# System ki list ko update karein (Bohot zaroori hai)
+# System ki list ko update karein
+
 apt update
 
-# Note: Agar container band ho jaye, toh dobara start karne ke liye:
-# docker start my_kali
+Agar container band ho jaye, toh dobara start karne ke liye:
+
 # docker exec -it my_kali /bin/bash
